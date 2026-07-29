@@ -1,0 +1,10 @@
+{
+  "name": "rf-sense-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests_js/browser-engine.test.mjs",
+    "check": "node --check src/rf_sense/static/app.js && node --check src/rf_sense/static/wifi-source.js && node --check src/rf_sense/static/browser-engine.js"
+  }
+}
+

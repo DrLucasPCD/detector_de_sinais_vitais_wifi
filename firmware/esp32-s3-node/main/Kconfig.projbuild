@@ -1,0 +1,45 @@
+menu "RF Sense"
+
+config RF_WIFI_SSID
+    string "SSID da rede 2,4 GHz"
+    default ""
+
+config RF_WIFI_PASSWORD
+    string "Senha da rede"
+    default ""
+
+config RF_NODE_ID
+    int "Identificador do nó"
+    range 0 255
+    default 1
+
+config RF_HOSTNAME
+    string "Hostname mDNS sem .local"
+    default "rf-sense"
+
+config RF_STREAM_FPS
+    int "Limite de quadros CSI por segundo"
+    range 5 50
+    default 20
+
+config RF_UDP_ENABLED
+    bool "Enviar wire v1 também por UDP"
+    default n
+
+config RF_UDP_TARGET_IP
+    string "IP do agregador UDP"
+    depends on RF_UDP_ENABLED
+    default "192.168.1.100"
+
+config RF_UDP_TARGET_PORT
+    int "Porta do agregador UDP"
+    depends on RF_UDP_ENABLED
+    range 1 65535
+    default 5005
+
+config RF_DISPLAY_ENABLED
+    bool "Display (não usar na DevKitC sem display)"
+    default n
+
+endmenu
+

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071511">
+    <meta
+      name="description"
+      content="Sensoriamento Wi-Fi CSI local com ESP32-S3 e processamento no navegador."
+    >
+    <title>RF Sense · Monitor local</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="RF Sense">
+          <span class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+          <span>
+            <strong>RF SENSE</strong>
+            <small>Monitor local de CSI</small>
+          </span>
+        </a>
+        <div class="top-actions">
+          <span class="privacy-pill">Dados ficam neste dispositivo</span>
+          <button id="demoButton" class="button button-ghost" type="button">
+            Rodar demonstração
+          </button>
+          <button id="sensorButton" class="button button-primary" type="button">
+            Abrir sensor na rede
+          </button>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">SENSORIAMENTO SEM CÂMERA</p>
+          <h1>O ambiente vira sinal.<br><span>O sinal vira contexto.</span></h1>
+          <p class="hero-copy">
+            A ESP32-S3 captura perturbações do Wi-Fi e transmite pela rede local;
+            este navegador calibra, processa e mostra presença, movimento e
+            tendências experimentais.
+          </p>
+        </div>
+        <div id="statusPanel" class="status-panel" data-state="waiting">
+          <span class="status-orbit"><i></i></span>
+          <div>
+            <small>ESTADO OPERACIONAL</small>
+            <strong id="operationalState">AGUARDANDO FONTE</strong>
+            <span id="sourceLabel">Conecte a placa ou inicie a demonstração.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Métricas principais">
+        <article class="metric metric-presence">
+          <div class="metric-head">
+            <span>Presença</span>
+            <i id="presenceDot" class="metric-dot"></i>
+          </div>
+          <strong id="presenceValue">—</strong>
+          <small id="presenceConfidence">Sem classificação</small>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>Movimento</span><b>ENERGIA</b></div>
+          <strong id="motionValue">—</strong>
+          <small id="motionPower">Aguardando baseline</small>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>Respiração</span><b>EXPERIMENTAL</b></div>
+          <strong><span id="breathingValue">—</span><em> rpm</em></strong>
+          <small id="breathingConfidence">Oculto até ser válido</small>
+        </article>
+        <article class="metric">
+          <div class="metric-head"><span>Frequência cardíaca</span><b>EXPERIMENTAL</b></div>
+          <strong><span id="heartValue">—</span><em> bpm</em></strong>
+          <small id="heartConfidence">Não é medição médica</small>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel signal-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">LEITURA EM TEMPO REAL</p>
+              <h2>Resposta do ambiente</h2>
+            </div>
+            <div class="legend">
+              <span><i class="legend-a"></i> confiança</span>
+              <span><i class="legend-b"></i> movimento</span>
+            </div>
+          </div>
+          <canvas id="signalChart" height="230" aria-label="Gráfico do sinal"></canvas>
+        </article>
+
+        <article class="panel calibration-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">BASELINE DA SALA</p>
+              <h2>Calibração</h2>
+            </div>
+            <button id="calibrateButton" class="icon-button" type="button" title="Recalibrar">
+              ↻
+            </button>
+          </div>
+          <div class="calibration-ring" id="calibrationRing">
+            <span id="calibrationPercent">0%</span>
+          </div>
+          <p id="calibrationMessage">
+            Esvazie a área e mantenha ventiladores no estado estável.
+          </p>
+          <div class="progress"><i id="calibrationProgress"></i></div>
+          <small id="calibrationFrames">0 de 600 quadros</small>
+        </article>
+
+        <article class="panel diagnostics-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">QUALIDADE DA CAPTURA</p>
+              <h2>Diagnóstico do nó</h2>
+            </div>
+            <span id="nodeBadge" class="node-badge">NÓ —</span>
+          </div>
+          <dl class="diagnostics">
+            <div><dt>Taxa</dt><dd><span id="fpsValue">—</span> fps</dd></div>
+            <div><dt>Perda UDP</dt><dd id="lossValue">—</dd></div>
+            <div><dt>RSSI</dt><dd><span id="rssiValue">—</span> dBm</dd></div>
+            <div><dt>SNR</dt><dd><span id="snrValue">—</span> dB</dd></div>
+            <div><dt>Jitter</dt><dd><span id="jitterValue">—</span> ms</dd></div>
+            <div><dt>Frequência</dt><dd><span id="frequencyValue">—</span> MHz</dd></div>
+          </dl>
+        </article>
+      </section>
+
+      <section class="responsibility">
+        <div class="responsibility-icon">!</div>
+        <div>
+          <strong>Uso responsável</strong>
+          <p>
+            Este protótipo mede perturbações de radiofrequência. Não identifica
+            pessoas e não substitui equipamento médico ou sistema de segurança.
+          </p>
+        </div>
+        <span id="browserSupport">Compatível com Safari · conexão Wi-Fi local</span>
+      </section>
+
+      <footer>
+        <span>RF Sense v0.1 · Processamento local</span>
+        <span>CSI bruto não é enviado ao Netlify</span>
+      </footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

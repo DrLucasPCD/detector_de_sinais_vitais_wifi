@@ -1,0 +1,3 @@
+# Overlay explícito da ESP32-S3-DevKitC-1 sem display.
+CONFIG_RF_DISPLAY_ENABLED=n
+
