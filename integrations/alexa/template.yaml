@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: RF Sense Alexa integration (independent of Home Assistant)
+Parameters:
+  ThingName:
+    Type: String
+    Default: rf-sense-local
+Resources:
+  RFSenseAlexaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Timeout: 8
+      Environment:
+        Variables:
+          RF_SENSE_THING_NAME: !Ref ThingName
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: iot:GetThingShadow
+              Resource: !Sub arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:thing/${ThingName}
+Outputs:
+  FunctionArn:
+    Value: !GetAtt RFSenseAlexaFunction.Arn

@@ -11,9 +11,13 @@ build/
 dist/
 *.egg-info/
 .codex/
+.rf-sense-homekit.state
+*.pem
+*.crt
+*.key
+secrets/
 datasets/*
 !datasets/.gitignore
 firmware/**/build/
 firmware/**/sdkconfig
 firmware/**/sdkconfig.old
-

@@ -17,6 +17,7 @@ from . import __version__
 from .config import Settings
 from .processing import SensorEngine
 from .simulator import run_simulator
+from .spatial import Environment, MeshObservation, SpatialEngine
 from .udp import create_udp_receiver
 
 settings = Settings.from_env()
@@ -29,6 +30,12 @@ async def lifespan(app: FastAPI):
         stale_after_seconds=settings.stale_after_seconds,
     )
     app.state.engine = engine
+    environment = Environment.load(settings.environment_file)
+    spatial = SpatialEngine(
+        environment,
+        track_ttl_seconds=float(settings.stale_after_seconds),
+    )
+    app.state.spatial = spatial
     app.state.started_at = time.monotonic()
     udp_transport = await create_udp_receiver(
         engine=engine,
@@ -38,6 +45,8 @@ async def lifespan(app: FastAPI):
         simulator_active=settings.simulator,
     )
     simulator_task: asyncio.Task[None] | None = None
+    integration_task: asyncio.Task[None] | None = None
+    integrations: list[object] = []
     if settings.simulator:
         simulator_task = asyncio.create_task(
             run_simulator(
@@ -48,6 +57,69 @@ async def lifespan(app: FastAPI):
             ),
             name="rf-sense-simulator",
         )
+    if settings.homekit_enabled:
+        if not settings.homekit_pin:
+            raise ValueError(
+                "RF_HOMEKIT_PIN é obrigatório quando RF_HOMEKIT_ENABLED=true"
+            )
+        from .integrations.homekit import HomeKitBridge
+
+        homekit = HomeKitBridge(
+            lambda: spatial.snapshot(engine),
+            list(environment.raw["rooms"]),
+            port=settings.homekit_port,
+            pin=settings.homekit_pin,
+            persist_file=settings.homekit_persist_file,
+        )
+        homekit.start()
+        integrations.append(homekit)
+    if settings.home_assistant_enabled:
+        if not settings.mqtt_host:
+            raise ValueError(
+                "RF_MQTT_HOST é obrigatório quando "
+                "RF_HOME_ASSISTANT_ENABLED=true"
+            )
+        from .integrations.mqtt_publishers import HomeAssistantPublisher
+
+        home_assistant = HomeAssistantPublisher(
+            host=settings.mqtt_host,
+            port=settings.mqtt_port,
+            username=settings.mqtt_username,
+            password=settings.mqtt_password,
+            tls=settings.mqtt_tls,
+            discovery_prefix=settings.mqtt_discovery_prefix,
+            rooms=list(environment.raw["rooms"]),
+        )
+        home_assistant.start()
+        integrations.append(home_assistant)
+    if settings.alexa_iot_enabled:
+        required = (
+            settings.aws_iot_endpoint,
+            settings.aws_iot_cert,
+            settings.aws_iot_key,
+            settings.aws_iot_ca,
+        )
+        if not all(required):
+            raise ValueError(
+                "RF_AWS_IOT_ENDPOINT/CERT/KEY/CA são obrigatórios quando "
+                "RF_ALEXA_IOT_ENABLED=true"
+            )
+        from .integrations.mqtt_publishers import AwsIotShadowPublisher
+
+        alexa = AwsIotShadowPublisher(
+            endpoint=settings.aws_iot_endpoint or "",
+            thing_name=settings.aws_iot_thing_name,
+            cert=settings.aws_iot_cert or "",
+            key=settings.aws_iot_key or "",
+            ca=settings.aws_iot_ca or "",
+        )
+        alexa.start()
+        integrations.append(alexa)
+    if integrations:
+        integration_task = asyncio.create_task(
+            _publish_integrations(spatial, engine, integrations),
+            name="rf-sense-integrations",
+        )
     try:
         yield
     finally:
@@ -55,6 +127,25 @@ async def lifespan(app: FastAPI):
         if simulator_task:
             simulator_task.cancel()
             await asyncio.gather(simulator_task, return_exceptions=True)
+        if integration_task:
+            integration_task.cancel()
+            await asyncio.gather(integration_task, return_exceptions=True)
+        for integration in reversed(integrations):
+            integration.stop()
+
+
+async def _publish_integrations(
+    spatial: SpatialEngine,
+    engine: SensorEngine,
+    integrations: list[object],
+) -> None:
+    while True:
+        snapshot = spatial.snapshot(engine)
+        for integration in integrations:
+            publish = getattr(integration, "publish", None)
+            if publish:
+                publish(snapshot)
+        await asyncio.sleep(2)
 
 
 app = FastAPI(
@@ -79,6 +170,16 @@ def get_engine(request: Request) -> SensorEngine:
     return request.app.state.engine
 
 
+def get_spatial(request: Request) -> SpatialEngine:
+    return request.app.state.spatial
+
+
+def latest_payload(request: Request) -> dict[str, object]:
+    engine: SensorEngine = request.app.state.engine
+    spatial: SpatialEngine = request.app.state.spatial
+    return {**engine.latest(), "spatial": spatial.snapshot(engine)}
+
+
 def require_token(authorization: str | None = Header(default=None)) -> None:
     if settings.api_token is None:
         return
@@ -93,6 +194,23 @@ class CalibrationRequest(BaseModel):
     frames: int = Field(default=600, ge=100, le=100_000)
 
 
+class SpatialObservationRequest(BaseModel):
+    track_key: str = Field(min_length=1, max_length=64)
+    node_id: int = Field(ge=0, le=255)
+    distance_m: float = Field(gt=0, le=100)
+    confidence: float = Field(ge=0, le=1)
+    breathing_bpm: float | None = Field(default=None, ge=4, le=50)
+    breathing_confidence: float = Field(default=0, ge=0, le=1)
+    heart_bpm: float | None = Field(default=None, ge=25, le=240)
+    heart_confidence: float = Field(default=0, ge=0, le=1)
+
+
+class SpatialObservationsRequest(BaseModel):
+    observations: list[SpatialObservationRequest] = Field(
+        min_length=1, max_length=128
+    )
+
+
 @app.get("/health")
 async def health(request: Request) -> dict[str, object]:
     engine: SensorEngine = request.app.state.engine
@@ -102,14 +220,44 @@ async def health(request: Request) -> dict[str, object]:
         "version": __version__,
         "uptime_s": round(time.monotonic() - request.app.state.started_at, 1),
         "nodes": len(engine.nodes),
+        "spatial_tracks": len(request.app.state.spatial.tracks),
     }
 
 
 @app.get("/api/v1/sensing/latest", dependencies=[Depends(require_token)])
 async def sensing_latest(
+    request: Request,
+) -> dict[str, object]:
+    return latest_payload(request)
+
+
+@app.get("/api/v1/spatial/map", dependencies=[Depends(require_token)])
+async def spatial_map(
+    spatial: SpatialEngine = Depends(get_spatial),
     engine: SensorEngine = Depends(get_engine),
 ) -> dict[str, object]:
-    return engine.latest()
+    return spatial.snapshot(engine)
+
+
+@app.post(
+    "/api/v1/spatial/observations",
+    dependencies=[Depends(require_token)],
+)
+async def spatial_observations(
+    body: SpatialObservationsRequest,
+    spatial: SpatialEngine = Depends(get_spatial),
+) -> dict[str, object]:
+    accepted = spatial.observe(
+        MeshObservation(**observation.model_dump())
+        for observation in body.observations
+    )
+    return {
+        "accepted_tracks": accepted,
+        "rejected_tracks": (
+            len({item.track_key for item in body.observations}) - accepted
+        ),
+        "minimum_distinct_nodes": 3,
+    }
 
 
 @app.get("/api/v1/nodes", dependencies=[Depends(require_token)])
@@ -177,12 +325,16 @@ async def sensing_socket(websocket: WebSocket) -> None:
             return
     await websocket.accept()
     engine: SensorEngine = websocket.app.state.engine
-    last_version = -1
+    spatial: SpatialEngine = websocket.app.state.spatial
+    last_version = (-1, -1)
     try:
         while True:
-            if engine.version != last_version:
-                last_version = engine.version
-                await websocket.send_json(engine.latest())
+            version = (engine.version, spatial.version)
+            if version != last_version:
+                last_version = version
+                await websocket.send_json(
+                    {**engine.latest(), "spatial": spatial.snapshot(engine)}
+                )
             await asyncio.sleep(0.2)
     except WebSocketDisconnect:
         return

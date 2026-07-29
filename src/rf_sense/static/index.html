@@ -82,6 +82,23 @@
         </article>
       </section>
 
+      <section class="panel spatial-panel">
+        <div class="panel-head spatial-head">
+          <div>
+            <p class="eyebrow">AMBIENTE E REDE MESH</p>
+            <h2>Mapa espacial 3D</h2>
+          </div>
+          <div id="mapSummary" class="map-summary" aria-live="polite"></div>
+        </div>
+        <div class="spatial-layout">
+          <canvas
+            id="environmentMap"
+            aria-label="Mapa 3D do ambiente, nós e pessoas detectadas"
+          ></canvas>
+          <aside id="mapDetail" class="map-detail"></aside>
+        </div>
+      </section>
+
       <section class="dashboard-grid">
         <article class="panel signal-panel">
           <div class="panel-head">

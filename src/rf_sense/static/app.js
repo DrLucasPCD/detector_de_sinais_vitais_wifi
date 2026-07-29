@@ -1,11 +1,17 @@
 import { BrowserSimulator } from "./browser-engine.js";
 import { DirectWiFiSource, isPublicHostedPage } from "./wifi-source.js";
+import { EnvironmentMap3D } from "./map3d.js";
 
 const $ = (selector) => document.querySelector(selector);
 const history = { confidence: [], motion: [] };
 let currentMode = "waiting";
 let latest = null;
 let backendSocket = null;
+const environmentMap = new EnvironmentMap3D(
+  $("#environmentMap"),
+  $("#mapDetail"),
+  $("#mapSummary"),
+);
 
 const directWiFi = new DirectWiFiSource(handleUpdate, setSourceMessage);
 const browserSimulator = new BrowserSimulator(handleUpdate);
@@ -61,6 +67,7 @@ $("#calibrateButton").addEventListener("click", async () => {
 function handleUpdate(update) {
   latest = update;
   render(update);
+  environmentMap.update(update.spatial ?? fallbackSpatial(update));
 }
 
 function render(update) {
@@ -210,6 +217,65 @@ function qualityText(estimate) {
     : `SQI ${confidence}% · ±${Number(uncertainty).toFixed(1)}`;
 }
 
+function fallbackSpatial(update) {
+  const node = update.nodes?.[0];
+  const occupied = update.classification?.presence === true;
+  return {
+    environment: {
+      site: { name: "Ambiente RF Sense" },
+      bounds: { width: 8, depth: 6, height: 2.8 },
+      rooms: [
+        { id: "ambiente", name: "Ambiente", origin: [0, 0, 0], size: [8, 6, 2.8] },
+      ],
+      nodes: [
+        {
+          node_id: node?.node_id ?? 1,
+          name: "Nó 1",
+          room_id: "ambiente",
+          position: [0.6, 0.6, 1.2],
+          coverage_radius_m: 4.5,
+        },
+      ],
+      mesh_links: [],
+    },
+    nodes: [{
+      node_id: node?.node_id ?? 1,
+      state: node ? "online" : "offline",
+    }],
+    people: occupied ? [{
+      track_id: "zone-ambiente",
+      room_id: "ambiente",
+      position: [4, 3, 1],
+      position_valid: false,
+      uncertainty_m: 4,
+      confidence: update.classification?.confidence ?? 0,
+      count_valid: false,
+      vital_signs: {
+        breathing_bpm: update.vital_signs?.breathing?.valid
+          ? update.vital_signs.breathing.value_bpm
+          : null,
+        heart_bpm: update.vital_signs?.heart?.valid
+          ? update.vital_signs.heart.value_bpm
+          : null,
+      },
+    }] : [],
+    rooms: [{
+      room_id: "ambiente",
+      name: "Ambiente",
+      occupancy: occupied,
+      people_count: occupied ? 1 : 0,
+      count_confidence: update.classification?.confidence ?? 0,
+    }],
+    summary: {
+      people_count: occupied ? 1 : 0,
+      localized_count: 0,
+      mesh_nodes_online: node ? 1 : 0,
+      mesh_ready: false,
+      count_valid: false,
+    },
+  };
+}
+
 async function connectBackend() {
   const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   if (!isLocal) return;
@@ -243,3 +309,4 @@ render({
   features: {},
   vital_signs: { valid: false, confidence: 0 },
 });
+environmentMap.update(fallbackSpatial(latest ?? {}));

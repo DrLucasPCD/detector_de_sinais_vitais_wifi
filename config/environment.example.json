@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "site": {
+    "id": "casa-principal",
+    "name": "Casa principal"
+  },
+  "units": "m",
+  "bounds": {
+    "width": 8.0,
+    "depth": 6.0,
+    "height": 2.8
+  },
+  "rooms": [
+    {
+      "id": "sala",
+      "name": "Sala",
+      "origin": [0.0, 0.0, 0.0],
+      "size": [4.0, 6.0, 2.8]
+    },
+    {
+      "id": "quarto",
+      "name": "Quarto",
+      "origin": [4.0, 0.0, 0.0],
+      "size": [4.0, 3.0, 2.8]
+    },
+    {
+      "id": "escritorio",
+      "name": "Escritório",
+      "origin": [4.0, 3.0, 0.0],
+      "size": [4.0, 3.0, 2.8]
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": 1,
+      "name": "Nó sala oeste",
+      "room_id": "sala",
+      "position": [0.5, 0.6, 1.2],
+      "coverage_radius_m": 4.0
+    },
+    {
+      "node_id": 2,
+      "name": "Nó sala leste",
+      "room_id": "sala",
+      "position": [3.5, 5.4, 1.2],
+      "coverage_radius_m": 4.0
+    },
+    {
+      "node_id": 3,
+      "name": "Nó quarto",
+      "room_id": "quarto",
+      "position": [7.4, 0.6, 1.2],
+      "coverage_radius_m": 3.5
+    },
+    {
+      "node_id": 4,
+      "name": "Nó escritório",
+      "room_id": "escritorio",
+      "position": [7.4, 5.4, 1.2],
+      "coverage_radius_m": 3.5
+    }
+  ],
+  "mesh_links": [
+    {"id": "link-1-2", "a": 1, "b": 2},
+    {"id": "link-2-3", "a": 2, "b": 3},
+    {"id": "link-2-4", "a": 2, "b": 4},
+    {"id": "link-3-4", "a": 3, "b": 4}
+  ]
+}

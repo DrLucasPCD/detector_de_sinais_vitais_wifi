@@ -33,6 +33,24 @@ class Settings:
     calibration_frames: int
     stale_after_seconds: int
     api_token: str | None
+    environment_file: str | None
+    homekit_enabled: bool
+    homekit_port: int
+    homekit_pin: str | None
+    homekit_persist_file: str
+    alexa_iot_enabled: bool
+    aws_iot_endpoint: str | None
+    aws_iot_thing_name: str
+    aws_iot_cert: str | None
+    aws_iot_key: str | None
+    aws_iot_ca: str | None
+    home_assistant_enabled: bool
+    mqtt_host: str | None
+    mqtt_port: int
+    mqtt_username: str | None
+    mqtt_password: str | None
+    mqtt_tls: bool
+    mqtt_discovery_prefix: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -76,6 +94,35 @@ class Settings:
                 "RF_STALE_AFTER_SECONDS", 10, 2, 3600
             ),
             api_token=api_token,
+            environment_file=os.getenv("RF_ENVIRONMENT_FILE", "").strip() or None,
+            homekit_enabled=_as_bool(os.getenv("RF_HOMEKIT_ENABLED"), False),
+            homekit_port=_as_int("RF_HOMEKIT_PORT", 51826, 1, 65535),
+            homekit_pin=os.getenv("RF_HOMEKIT_PIN", "").strip() or None,
+            homekit_persist_file=os.getenv(
+                "RF_HOMEKIT_PERSIST_FILE", ".rf-sense-homekit.state"
+            ).strip(),
+            alexa_iot_enabled=_as_bool(
+                os.getenv("RF_ALEXA_IOT_ENABLED"), False
+            ),
+            aws_iot_endpoint=os.getenv("RF_AWS_IOT_ENDPOINT", "").strip()
+            or None,
+            aws_iot_thing_name=os.getenv(
+                "RF_AWS_IOT_THING_NAME", "rf-sense-local"
+            ).strip(),
+            aws_iot_cert=os.getenv("RF_AWS_IOT_CERT", "").strip() or None,
+            aws_iot_key=os.getenv("RF_AWS_IOT_KEY", "").strip() or None,
+            aws_iot_ca=os.getenv("RF_AWS_IOT_CA", "").strip() or None,
+            home_assistant_enabled=_as_bool(
+                os.getenv("RF_HOME_ASSISTANT_ENABLED"), False
+            ),
+            mqtt_host=os.getenv("RF_MQTT_HOST", "").strip() or None,
+            mqtt_port=_as_int("RF_MQTT_PORT", 1883, 1, 65535),
+            mqtt_username=os.getenv("RF_MQTT_USERNAME", "").strip() or None,
+            mqtt_password=os.getenv("RF_MQTT_PASSWORD", "").strip() or None,
+            mqtt_tls=_as_bool(os.getenv("RF_MQTT_TLS"), False),
+            mqtt_discovery_prefix=os.getenv(
+                "RF_MQTT_DISCOVERY_PREFIX", "homeassistant"
+            ).strip(),
         )
 
     def public_dict(self) -> dict[str, object]:
@@ -89,6 +136,24 @@ class Settings:
             "calibration_frames": self.calibration_frames,
             "stale_after_seconds": self.stale_after_seconds,
             "auth_enabled": self.api_token is not None,
+            "environment_file": self.environment_file,
+            "integrations": {
+                "homekit": {
+                    "enabled": self.homekit_enabled,
+                    "mode": "direct_hap",
+                    "port": self.homekit_port,
+                },
+                "alexa": {
+                    "enabled": self.alexa_iot_enabled,
+                    "mode": "direct_aws_iot",
+                    "thing_name": self.aws_iot_thing_name,
+                },
+                "home_assistant": {
+                    "enabled": self.home_assistant_enabled,
+                    "mode": "independent_mqtt_discovery",
+                    "broker_configured": self.mqtt_host is not None,
+                },
+            },
         }
 
 
@@ -99,4 +164,3 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
         return False
-

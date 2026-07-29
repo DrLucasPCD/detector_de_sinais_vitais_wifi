@@ -12,6 +12,8 @@ espectral e autocorrelação para respiração, penaliza harmônicos respiratór
 na estimativa cardíaca e publica qualidade/validade separadas. Consulte a
 [revisão técnica](docs/research/estado-da-arte-2026.md) e o
 [protocolo de validação](docs/validation/protocolo-sinais-vitais.md).
+O dashboard também inclui um
+[mapa espacial 3D e contrato de expansão mesh](docs/arquitetura-mapa-mesh-integracoes.md).
 
 > Este é um protótipo de engenharia. Presença e movimento dependem da
 > calibração do ambiente. Respiração e frequência cardíaca são estimativas
@@ -35,6 +37,10 @@ O script de bootstrap cria `.venv`, atualiza as ferramentas do ambiente
 virtual e instala o projeto localmente nesse ambiente. A instalação não usa
 arquivos `.pth`, evitando uma incompatibilidade do Python 3.14 com pastas
 ocultas no macOS. Nenhuma dependência é instalada globalmente.
+
+Para instalar o código na placa física, siga o [guia de instalação da
+ESP32-S3](docs/instalacao-esp32-s3.md). Ele é separado do modo demonstração
+Python e não exige Docker.
 
 ## Safari e placa separada por Wi-Fi
 
@@ -81,6 +87,8 @@ automaticamente para evitar a inclusão acidental de segredos.
 | `GET` | `/api/v1/nodes` | inventário, FPS, perda e estado |
 | `GET` | `/api/v1/vital-signs` | estimativas e validade |
 | `GET` | `/api/v1/config` | configuração não secreta |
+| `GET` | `/api/v1/spatial/map` | mapa, nós, salas, pessoas e validade |
+| `POST` | `/api/v1/spatial/observations` | observações multi-nó para trilateração |
 | `POST` | `/api/v1/calibration/start` | reinicia a baseline |
 | `GET` | `/ws/sensing` | streaming WebSocket |
 | `GET` | `/metrics` | métricas Prometheus sem payload CSI |
@@ -112,13 +120,23 @@ export RF_ALLOWED_SENDERS=192.168.1.50
 ```
 
 O firmware é compilado com uma instalação local do ESP-IDF v5.4; consulte
-[`firmware/esp32-s3-node/README.md`](firmware/esp32-s3-node/README.md).
+[o guia completo de instalação da ESP32-S3](docs/instalacao-esp32-s3.md) e o
+[README do firmware](firmware/esp32-s3-node/README.md).
+
+## HomeKit, Alexa e Home Assistant
+
+As três integrações são independentes. HomeKit usa uma bridge HAP local
+própria; Alexa usa AWS IoT/Lambda; Home Assistant usa MQTT Discovery. HomeKit e
+Alexa não passam pelo Home Assistant. Veja o
+[guia de instalação das integrações](docs/integracoes-homekit-alexa-home-assistant.md).
 
 ## Limites deliberados desta versão
 
-- Um nó e classificação grosseira de presença/movimento.
+- Um nó fornece apenas classificação grosseira e zona provável.
 - Calibração por ambiente; mover AP, placa ou móveis exige recalibrar.
 - CSI bruto só existe em memória e não é persistido.
 - Vitals ficam ocultos quando há movimento, janela curta ou confiança baixa.
-- Sem contagem de pessoas, pose, biometria, queda operacional ou exposição à
-  Internet.
+- O contrato aceita várias pessoas, mas contagem/localização só são marcadas
+  válidas com observações de três ou mais nós; o firmware atual ainda exige
+  pesquisa e validação multi-alvo antes de alegar essa capacidade em campo.
+- Sem identidade biométrica, diagnóstico, queda operacional ou alerta de vida.

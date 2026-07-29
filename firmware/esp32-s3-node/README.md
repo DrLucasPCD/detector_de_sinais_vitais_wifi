@@ -3,18 +3,21 @@
 Alvo obrigatório: **ESP32-S3-DevKitC-1 N8R8**. Este projeto usa ESP-IDF v5.4
 instalado localmente; Docker não é necessário.
 
+Para o procedimento completo, incluindo porta USB, primeira gravação, modo
+BOOT/RESET, verificação no Safari e solução de problemas, consulte o
+[guia de instalação](../../docs/instalacao-esp32-s3.md).
+
 ## Instalar o ESP-IDF no macOS
 
 Siga a instalação oficial da Espressif para v5.4 e carregue o ambiente:
 
 ```bash
-cd ~/esp/esp-idf
-git checkout v5.4.4
-git submodule update --init --recursive
-./install.sh esp32s3
-. ./export.sh
+source "$HOME/esp/esp-idf/export.sh"
 idf.py --version
 ```
+
+Se ainda não instalou o ESP-IDF, siga primeiro o
+[guia de instalação](../../docs/instalacao-esp32-s3.md).
 
 ## Configurar, compilar e gravar
 
@@ -23,7 +26,7 @@ cd firmware/esp32-s3-node
 idf.py set-target esp32s3
 idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.devkitc" menuconfig
 idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.devkitc" build
-idf.py -p /dev/cu.SUA_PORTA flash monitor
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.devkitc" -p /dev/cu.SUA_PORTA flash monitor
 ```
 
 Em `RF Sense`, configure SSID 2,4 GHz, senha, `node_id` e hostname. `sdkconfig`
@@ -57,4 +60,3 @@ para operação 24/7, retenção controlada e futura malha com vários nós.
   incrementa métricas, nunca bloqueia o callback Wi-Fi.
 - O callback usa somente LLTF para estabilizar o layout de subportadoras.
 - Respiração e frequência cardíaca continuam experimentais e não médicas.
-

@@ -1,0 +1,57 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "r f sense",
+      "intents": [
+        {
+          "name": "GetPeopleCountIntent",
+          "samples": [
+            "quantas pessoas há",
+            "quantas pessoas foram detectadas"
+          ]
+        },
+        {
+          "name": "GetRoomOccupancyIntent",
+          "slots": [
+            {
+              "name": "room",
+              "type": "AMAZON.Room"
+            }
+          ],
+          "samples": [
+            "tem alguém no {room}",
+            "há presença no {room}"
+          ]
+        },
+        {
+          "name": "GetVitalSignsIntent",
+          "slots": [
+            {
+              "name": "room",
+              "type": "AMAZON.Room"
+            }
+          ],
+          "samples": [
+            "quais os sinais no {room}",
+            "qual a respiração no {room}",
+            "qual a frequência cardíaca no {room}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        }
+      ],
+      "types": []
+    }
+  }
+}
+
