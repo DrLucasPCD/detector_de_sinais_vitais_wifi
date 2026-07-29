@@ -1,0 +1,24 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+
+/index.html
+  Cache-Control: no-cache
+
+/app.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/map3d.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/browser-engine.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/wifi-source.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/styles.css
+  Cache-Control: no-cache, max-age=0, must-revalidate
