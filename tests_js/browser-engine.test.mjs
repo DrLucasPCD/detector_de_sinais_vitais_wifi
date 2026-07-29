@@ -43,3 +43,23 @@ test("engine do navegador calibra e detecta presença", () => {
   assert.equal(update.classification.motion_state, "still");
 });
 
+test("consenso multissubportadora estima respiração e pulso separadamente", () => {
+  const engine = new BrowserEngine(40, "test");
+  const simulator = new BrowserSimulator(() => {});
+  let update;
+  let timestamp = 200;
+  for (let index = 0; index < 40; index += 1) {
+    update = engine.process(simulator.frame(timestamp, "empty"));
+    timestamp += 0.05;
+  }
+  for (let index = 0; index < 1100; index += 1) {
+    update = engine.process(simulator.frame(timestamp, "still"));
+    timestamp += 0.05;
+  }
+  assert.equal(update.vital_signs.breathing.valid, true);
+  assert.ok(Math.abs(update.vital_signs.breathing.value_bpm - 15) <= 1);
+  assert.equal(update.vital_signs.heart.valid, true);
+  assert.ok(Math.abs(update.vital_signs.heart.value_bpm - 72) <= 2);
+  assert.ok(update.vital_signs.breathing.traces_used >= 3);
+  assert.ok(update.vital_signs.heart.traces_used >= 3);
+});

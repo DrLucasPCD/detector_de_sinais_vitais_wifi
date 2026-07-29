@@ -21,7 +21,7 @@ static void init_nvs(void)
 void app_main(void)
 {
     init_nvs();
-    ESP_LOGI(TAG, "RF Sense firmware 0.1.0; node_id=%d", CONFIG_RF_NODE_ID);
+    ESP_LOGI(TAG, "RF Sense firmware 0.2.0; node_id=%d", CONFIG_RF_NODE_ID);
     ESP_LOGI(TAG, "Conectando à rede; a senha nunca é impressa");
 
     ESP_ERROR_CHECK(rf_wifi_connect());
@@ -31,4 +31,3 @@ void app_main(void)
     ESP_LOGI(TAG, "Dashboard: http://%s.local", CONFIG_RF_HOSTNAME);
     ESP_LOGI(TAG, "CSI wire v1 ativo em ws://%s.local/ws/csi", CONFIG_RF_HOSTNAME);
 }
-

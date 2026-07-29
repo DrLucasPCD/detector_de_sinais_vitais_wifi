@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from . import __version__
 from .config import Settings
@@ -124,7 +125,10 @@ async def vital_signs(
     return {
         "source": latest["source"],
         "vital_signs": latest["vital_signs"],
-        "disclaimer": "Estimativas experimentais; não usar para fins médicos.",
+        "disclaimer": (
+            "Estimativas experimentais; confidence é um SQI heurístico, "
+            "não probabilidade clínica. Não usar para fins médicos."
+        ),
     }
 
 
@@ -180,8 +184,11 @@ async def sensing_socket(websocket: WebSocket) -> None:
                 last_version = engine.version
                 await websocket.send_json(engine.latest())
             await asyncio.sleep(0.2)
+    except WebSocketDisconnect:
+        return
     except Exception:
-        await websocket.close()
+        if websocket.application_state == WebSocketState.CONNECTED:
+            await websocket.close(code=1011)
 
 
 @app.exception_handler(ValueError)
@@ -191,4 +198,3 @@ async def value_error_handler(_: Request, exc: ValueError) -> JSONResponse:
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="dashboard")
-

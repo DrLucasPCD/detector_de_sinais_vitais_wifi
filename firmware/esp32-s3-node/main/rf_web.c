@@ -99,7 +99,7 @@ static esp_err_t health_handler(httpd_req_t *req)
     int length = snprintf(
         response,
         sizeof(response),
-        "{\"status\":\"ok\",\"version\":\"0.1.0\",\"node_id\":%d,"
+        "{\"status\":\"ok\",\"version\":\"0.2.0\",\"node_id\":%d,"
         "\"queue_drops\":%" PRIu32 ",\"ws_drops\":%" PRIu32 "}",
         CONFIG_RF_NODE_ID,
         rf_csi_queue_drops(),

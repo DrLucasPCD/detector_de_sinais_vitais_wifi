@@ -20,6 +20,9 @@ class SyntheticCSIGenerator:
     node_id: int = 1
     subcarriers: int = 64
     fps: float = 20.0
+    breathing_hz: float = 0.25
+    heart_hz: float = 1.2
+    noise_sigma: float = 0.22
     sequence: int = 0
     _random: random.Random = field(init=False, repr=False)
     _phases: tuple[float, ...] = field(init=False, repr=False)
@@ -36,13 +39,13 @@ class SyntheticCSIGenerator:
         )
 
     def frame(self, now: float, mode: str) -> RawCSIFrame:
-        breathing = math.sin(2 * math.pi * 0.25 * now)
-        heart = math.sin(2 * math.pi * 1.2 * now)
+        breathing = math.sin(2 * math.pi * self.breathing_hz * now)
+        heart = math.sin(2 * math.pi * self.heart_hz * now)
         iq: list[tuple[int, int]] = []
         for index, (base, phase) in enumerate(
             zip(self._base, self._phases, strict=True)
         ):
-            noise = self._random.gauss(0.0, 0.22)
+            noise = self._random.gauss(0.0, self.noise_sigma)
             if mode == "empty":
                 amplitude = base + noise
                 phase_shift = self._random.gauss(0.0, 0.004)

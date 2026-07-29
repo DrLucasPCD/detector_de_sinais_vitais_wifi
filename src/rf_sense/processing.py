@@ -195,7 +195,9 @@ class NodeState:
         if self.sequence.fps and self.sequence.fps < 15:
             self.reasons.append("fps_abaixo_da_meta")
 
-        if now - self.last_vitals_at >= 1.0:
+        # Physiological rates evolve slowly; a 5 s cadence reduces CPU use
+        # without changing the 45–60 s analysis window.
+        if now - self.last_vitals_at >= 5.0:
             self.last_vitals_at = now
             self.vitals = self._estimate_vitals()
 
@@ -382,6 +384,17 @@ class SensorEngine:
                     "heart_bpm": None,
                     "confidence": 0.0,
                     "valid": False,
+                    "breathing": {
+                        "value_bpm": None,
+                        "confidence": 0.0,
+                        "valid": False,
+                    },
+                    "heart": {
+                        "value_bpm": None,
+                        "confidence": 0.0,
+                        "valid": False,
+                    },
+                    "motion_rejected": False,
                     "experimental": True,
                 },
                 "alerts": [],

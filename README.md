@@ -7,6 +7,12 @@ API e dashboard. No modo direto, a placa serve o app e transmite CSI por
 WebSocket na rede local, permitindo que Safari processe os dados no próprio
 dispositivo. Não usa Docker nem recursos externos no navegador.
 
+O estimador v2 faz seleção e consenso entre subportadoras, combina domínio
+espectral e autocorrelação para respiração, penaliza harmônicos respiratórios
+na estimativa cardíaca e publica qualidade/validade separadas. Consulte a
+[revisão técnica](docs/research/estado-da-arte-2026.md) e o
+[protocolo de validação](docs/validation/protocolo-sinais-vitais.md).
+
 > Este é um protótipo de engenharia. Presença e movimento dependem da
 > calibração do ambiente. Respiração e frequência cardíaca são estimativas
 > experimentais e não podem ser usadas para diagnóstico, emergência ou
@@ -26,8 +32,9 @@ Abra <http://127.0.0.1:8000>. O servidor inicia uma baseline de 600 quadros
 período. Depois ele alterna entre pessoa parada e movimento.
 
 O script de bootstrap cria `.venv`, atualiza as ferramentas do ambiente
-virtual e instala o projeto em modo editável. Nenhuma dependência é instalada
-globalmente.
+virtual e instala o projeto localmente nesse ambiente. A instalação não usa
+arquivos `.pth`, evitando uma incompatibilidade do Python 3.14 com pastas
+ocultas no macOS. Nenhuma dependência é instalada globalmente.
 
 ## Safari e placa separada por Wi-Fi
 

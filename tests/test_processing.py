@@ -44,3 +44,36 @@ def test_calibration_presence_motion_and_vitals() -> None:
     assert latest["classification"]["motion_state"] == "moving"
     assert latest["vital_signs"]["valid"] is False
 
+
+def test_multitrace_consensus_estimates_each_vital_independently() -> None:
+    engine = SensorEngine(calibration_frames=40, stale_after_seconds=10)
+    generator = SyntheticCSIGenerator(
+        seed=23,
+        breathing_hz=0.30,
+        heart_hz=1.35,
+        noise_sigma=0.30,
+    )
+    timestamp = 200.0
+    for _ in range(40):
+        engine.process(
+            generator.frame(timestamp, "empty"),
+            source_ip="127.0.0.1",
+            source="simulator",
+        )
+        timestamp += 0.05
+    for _ in range(1100):
+        engine.process(
+            generator.frame(timestamp, "still"),
+            source_ip="127.0.0.1",
+            source="simulator",
+        )
+        timestamp += 0.05
+
+    vitals = engine.latest()["vital_signs"]
+    assert vitals["breathing"]["valid"] is True
+    assert abs(vitals["breathing"]["value_bpm"] - 18.0) <= 1.0
+    assert vitals["breathing"]["traces_used"] >= 3
+    assert vitals["heart"]["valid"] is True
+    assert abs(vitals["heart"]["value_bpm"] - 81.0) <= 2.0
+    assert vitals["heart"]["traces_used"] >= 3
+    assert vitals["breathing"]["confidence"] != vitals["heart"]["confidence"]

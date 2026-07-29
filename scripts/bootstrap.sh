@@ -20,9 +20,12 @@ if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
 fi
 
 "${VENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel
-"${VENV_DIR}/bin/python" -m pip install --editable "${PROJECT_DIR}[dev]"
+"${VENV_DIR}/bin/python" -m pip install "${PROJECT_DIR}[dev]"
+"${VENV_DIR}/bin/python" -m pip install \
+  --force-reinstall --no-deps "${PROJECT_DIR}"
+
+"${VENV_DIR}/bin/python" -c "import rf_sense"
 
 echo
 echo "Ambiente pronto."
 echo "Execute: ${PROJECT_DIR}/scripts/run-demo.sh"
-

@@ -93,17 +93,30 @@ function render(update) {
     ? "Aguardando baseline"
     : `Potência ${Number(update.features.motion_power).toFixed(3)}`;
 
-  const showVitals = vitals.valid === true;
-  $("#breathingValue").textContent = showVitals ? vitals.breathing_bpm ?? "—" : "—";
-  $("#heartValue").textContent = showVitals ? vitals.heart_bpm ?? "—" : "—";
-  $("#breathingConfidence").textContent = showVitals
-    ? `${Math.round((vitals.confidence ?? 0) * 100)}% de confiança`
+  const breathing = vitals.breathing ?? {
+    value_bpm: vitals.breathing_bpm,
+    confidence: vitals.confidence,
+    valid: vitals.valid,
+  };
+  const heart = vitals.heart ?? {
+    value_bpm: vitals.heart_bpm,
+    confidence: vitals.confidence,
+    valid: vitals.valid,
+  };
+  $("#breathingValue").textContent =
+    breathing.valid === true ? breathing.value_bpm ?? "—" : "—";
+  $("#heartValue").textContent =
+    heart.valid === true ? heart.value_bpm ?? "—" : "—";
+  $("#breathingConfidence").textContent = breathing.valid === true
+    ? qualityText(breathing)
     : classification.motion_state === "moving"
       ? "Oculto durante movimento"
       : "Aguardando janela estável";
-  $("#heartConfidence").textContent = showVitals
-    ? "Estimativa experimental"
-    : "Não é medição médica";
+  $("#heartConfidence").textContent = heart.valid === true
+    ? qualityText(heart)
+    : vitals.window_seconds >= 35
+      ? "Sinal cardíaco ainda insuficiente"
+      : "Requer ao menos 35 s estáveis";
 
   const percent = Math.round((calibration.progress ?? 0) * 100);
   $("#calibrationPercent").textContent = `${percent}%`;
@@ -187,6 +200,14 @@ function sourceText(source, state) {
 
 function format(value, digits) {
   return value === null || value === undefined ? "—" : Number(value).toFixed(digits);
+}
+
+function qualityText(estimate) {
+  const confidence = Math.round((estimate.confidence ?? 0) * 100);
+  const uncertainty = estimate.uncertainty_bpm;
+  return uncertainty == null
+    ? `SQI ${confidence}%`
+    : `SQI ${confidence}% · ±${Number(uncertainty).toFixed(1)}`;
 }
 
 async function connectBackend() {

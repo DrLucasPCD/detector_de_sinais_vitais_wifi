@@ -101,11 +101,11 @@ def estimate_vitals(
         jitter_ms=jitter_ms,
         radio_snr_db=radio_snr_db,
     )
-    stillness = clamp(1.0 - motion_score / 0.55)
+    stillness = clamp(1.0 - motion_score / 0.90)
     common_gate = (
         clamp(presence_confidence)
         * capture_quality
-        * (0.35 + 0.65 * stillness)
+        * (0.55 + 0.45 * stillness)
     )
 
     breathing = _estimate_respiration(
@@ -201,13 +201,22 @@ def _estimate_respiration(
     if timestamps[-1] - timestamps[0] < 18.0:
         return RateEstimate(quality={"capture": round(common_gate, 3)})
 
-    candidates: list[_Candidate] = []
+    spectral_candidates: list[tuple[int, float, float, Sequence[float]]] = []
     for index, trace in enumerate(traces):
         frequency, spectral_quality, _ = _spectral_peak(
             timestamps, trace, 0.10, 0.55
         )
         if frequency is None:
             continue
+        if spectral_quality >= 0.08:
+            spectral_candidates.append(
+                (index, frequency, spectral_quality, trace)
+            )
+
+    candidates: list[_Candidate] = []
+    for index, frequency, spectral_quality, trace in sorted(
+        spectral_candidates, key=lambda item: item[2], reverse=True
+    )[:16]:
         acf_frequency, acf_quality = _autocorrelation_peak(
             timestamps, trace, 0.10, 0.55
         )
@@ -286,7 +295,7 @@ def _estimate_heart(
         candidates,
         common_gate=common_gate * 0.88,
         previous_bpm=previous_bpm,
-        minimum_confidence=0.68,
+        minimum_confidence=0.62,
         tolerance_bpm=4.5,
         method="cardiac-spectral-consensus-v2",
         window_seconds=window_seconds,
@@ -396,24 +405,37 @@ def _spectral_peak(
         return None, 0.0, 0.0
     relative_times = [timestamp - timestamps[0] for timestamp in timestamps]
     duration = relative_times[-1]
+    sample_rate = (count - 1) / max(duration, 1e-9)
     step = max(0.005, 1.0 / max(4.0 * duration, 1.0))
+    windowed = [
+        value
+        * (
+            0.5
+            - 0.5
+            * math.cos(2.0 * math.pi * index / max(1, count - 1))
+        )
+        for index, value in enumerate(values)
+    ]
     powers: list[float] = []
     frequencies: list[float] = []
     frequency = math.ceil(low_hz / step) * step
     while frequency <= high_hz + 1e-9:
-        real = 0.0
-        imag = 0.0
-        for index, (time_value, value) in enumerate(
-            zip(relative_times, values, strict=True)
-        ):
-            window = 0.5 - 0.5 * math.cos(
-                2.0 * math.pi * index / max(1, count - 1)
-            )
-            angle = 2.0 * math.pi * frequency * time_value
-            real += value * window * math.cos(angle)
-            imag -= value * window * math.sin(angle)
+        # Goertzel avoids thousands of sin/cos calls. Capture jitter is scored
+        # separately and high-jitter windows are rejected by capture_quality.
+        omega = 2.0 * math.pi * frequency / sample_rate
+        coefficient = 2.0 * math.cos(omega)
+        previous = 0.0
+        before_previous = 0.0
+        for value in windowed:
+            current = value + coefficient * previous - before_previous
+            before_previous = previous
+            previous = current
         frequencies.append(frequency)
-        powers.append(real * real + imag * imag)
+        powers.append(
+            previous * previous
+            + before_previous * before_previous
+            - coefficient * previous * before_previous
+        )
         frequency += step
     if not powers or max(powers) <= 1e-10:
         return None, 0.0, 0.0

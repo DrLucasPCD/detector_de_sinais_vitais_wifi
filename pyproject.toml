@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rf-sense"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agregador local de sensoriamento Wi-Fi CSI para ESP32-S3"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -37,4 +37,4 @@ rf_sense = ["static/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-
+pythonpath = ["src"]

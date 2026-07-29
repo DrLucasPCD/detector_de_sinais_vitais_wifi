@@ -36,7 +36,11 @@ static EventGroupHandle_t s_wifi_events;
 static QueueHandle_t s_csi_queue;
 static uint32_t s_sequence;
 static uint32_t s_queue_drops;
+static uint32_t s_source_drops;
+static uint32_t s_layout_drops;
 static int64_t s_last_csi_us;
+static uint8_t s_ap_bssid[6];
+static size_t s_expected_csi_bytes;
 
 static uint32_t channel_frequency(uint8_t channel)
 {
@@ -129,6 +133,10 @@ static void csi_callback(void *context, wifi_csi_info_t *info)
     if (info == NULL || info->buf == NULL || info->len < 2) {
         return;
     }
+    if (memcmp(info->mac, s_ap_bssid, sizeof(s_ap_bssid)) != 0) {
+        s_source_drops++;
+        return;
+    }
     const int64_t now = esp_timer_get_time();
     const int64_t minimum_interval = 1000000LL / CONFIG_RF_STREAM_FPS;
     if (now - s_last_csi_us < minimum_interval) {
@@ -136,11 +144,22 @@ static void csi_callback(void *context, wifi_csi_info_t *info)
     }
     s_last_csi_us = now;
 
-    size_t offset = info->first_word_invalid && info->len > 4 ? 4 : 0;
+    /*
+     * O ESP32-S3 pode marcar a primeira palavra como inválida. Removemos
+     * sempre os dois primeiros pares I/Q para manter o mesmo layout entre
+     * quadros, independentemente da flag.
+     */
+    size_t offset = info->len > 4 ? 4 : 0;
     size_t available = info->len - offset;
     available -= available % 2;
     if (available > sizeof(((csi_packet_t *)0)->iq)) {
         available = sizeof(((csi_packet_t *)0)->iq);
+    }
+    if (s_expected_csi_bytes == 0) {
+        s_expected_csi_bytes = available;
+    } else if (available != s_expected_csi_bytes) {
+        s_layout_drops++;
+        return;
     }
     csi_packet_t packet = {
         .len = available,
@@ -214,6 +233,22 @@ static void sender_task(void *argument)
 
 esp_err_t rf_csi_start(void)
 {
+    wifi_ap_record_t access_point = {0};
+    ESP_RETURN_ON_ERROR(
+        esp_wifi_sta_get_ap_info(&access_point),
+        TAG,
+        "não foi possível obter BSSID do AP");
+    memcpy(s_ap_bssid, access_point.bssid, sizeof(s_ap_bssid));
+    ESP_LOGI(
+        TAG,
+        "CSI filtrado no AP %02x:%02x:%02x:%02x:%02x:%02x",
+        s_ap_bssid[0],
+        s_ap_bssid[1],
+        s_ap_bssid[2],
+        s_ap_bssid[3],
+        s_ap_bssid[4],
+        s_ap_bssid[5]);
+
     s_csi_queue = xQueueCreate(CSI_QUEUE_LENGTH, sizeof(csi_packet_t));
     if (s_csi_queue == NULL) {
         return ESP_ERR_NO_MEM;
@@ -249,5 +284,5 @@ esp_err_t rf_csi_start(void)
 
 uint32_t rf_csi_queue_drops(void)
 {
-    return s_queue_drops;
+    return s_queue_drops + s_source_drops + s_layout_drops;
 }
