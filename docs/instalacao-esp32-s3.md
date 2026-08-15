@@ -1,24 +1,26 @@
 # Instalação do firmware na ESP32-S3
 
-Este guia grava o firmware RF Sense na **ESP32-S3-DevKitC-1 N8R8** usando um
-Mac. A gravação acontece por USB; depois da gravação, o funcionamento normal
-é separado do computador: a placa entra na rede Wi‑Fi e o Safari acessa o
-dashboard pela rede local.
+Este guia grava o firmware RF Sense na **YD-ESP32-S3 / ESP32-S3-WROOM-1
+N16R8** usando um Mac. A mesma tabela de partições cabe na DevKitC-1 N8R8,
+desde que o tamanho de flash seja ajustado no `menuconfig`. A gravação acontece
+por USB; depois dela, a placa entra na rede Wi‑Fi e o Safari acessa o dashboard
+pela rede local, sem depender do computador.
 
 > O firmware deste projeto está fixado no ESP-IDF **v5.4.4**. Não misture
 > comandos de instalações diferentes do ESP-IDF no mesmo terminal.
 
 ## O que você precisa
 
-- ESP32-S3-DevKitC-1 N8R8;
+- YD-ESP32-S3 N16R8, validada neste projeto, ou DevKitC-1 N8R8 compatível;
 - cabo USB-C **com dados**;
 - Mac com acesso à Internet durante a instalação do ESP-IDF;
 - rede Wi‑Fi 2,4 GHz (SSID e senha);
 - Mac/iPhone/iPad conectado à mesma rede durante o teste;
 - este repositório em `/Users/drlucasalbuquerque/Documents/Monitor vital wifi`.
 
-Confirme a memória da placa antes de gravar. O projeto usa uma tabela para
-8 MB; uma placa com outra configuração pode exigir outra tabela de partições.
+Confirme a memória da placa antes de gravar. O padrão do projeto é 16 MB para
+a N16R8. A tabela ocupa menos de 8 MB; na N8R8, selecione `8 MB` em
+`Serial flasher config > Flash size` antes de compilar.
 
 ## 1. Instalar o ESP-IDF
 
@@ -73,6 +75,15 @@ Espressif recomenda comparar a lista antes e depois de conectar a placa:
 
 Se nenhuma porta nova aparecer, teste outro cabo USB, outra porta do Mac e,
 se a placa usar conversor USB-UART, instale o driver correspondente.
+
+### As duas portas da YD-ESP32-S3
+
+A YD-ESP32-S3 possui uma USB-C ligada diretamente ao ESP32-S3 e outra ligada
+ao conversor CH343P. A porta direta normalmente aparece como
+`/dev/cu.usbmodem*`; em modo de download, o macOS a identifica como
+`USB JTAG/serial debug unit`. A porta CH343P normalmente aparece como
+`/dev/cu.usbserial-*` e pode exigir driver. Se uma porta não alimentar ou não
+enumerar no Mac, use a porta direta e a sequência BOOT/RST abaixo.
 
 ## 3. Preparar o projeto
 
@@ -143,9 +154,12 @@ O comando `flash` grava bootloader, tabela de partições, firmware e dashboard;
 Se aparecer `No serial data received`, coloque a placa em modo de download:
 
 1. mantenha `BOOT` pressionado;
-2. pressione `RESET` uma vez;
-3. solte `BOOT`;
-4. execute novamente o comando `flash monitor`.
+2. pressione e solte `RST`, sem soltar `BOOT`;
+3. continue segurando `BOOT` até aparecer `Connecting...` e a identificação
+   `USB JTAG/serial debug unit`;
+4. solte `BOOT` somente depois que a conexão for confirmada;
+5. execute novamente o comando `flash monitor`, se ele ainda não estiver em
+   execução.
 
 ## 6. Verificar o boot
 
@@ -225,3 +239,18 @@ Considere a instalação concluída quando todos estes itens forem verdadeiros:
 Respiração e frequência cardíaca continuam estimativas experimentais. O
 procedimento para comparar os valores com cinta respiratória e ECG/PPG está em
 [protocolo de validação](validation/protocolo-sinais-vitais.md).
+
+## Registro da instalação validada
+
+Em 15/08/2026, a instalação física foi validada com:
+
+- YD-ESP32-S3, módulo ESP32-S3-WROOM-1 N16R8;
+- ESP32-S3 rev. 0.2, flash quad de 16 MB e PSRAM de 8 MB;
+- ESP-IDF v5.4.4 no macOS, sem Docker;
+- gravação pela USB nativa em `/dev/cu.usbmodem101` no modo download;
+- API `/health` respondendo `status: ok` e firmware `0.2.0`;
+- dashboard HTTP servido pela placa;
+- 10 quadros CSI recebidos pelo WebSocket em 879 ms.
+
+O endereço IP é atribuído pelo roteador e pode mudar. A senha Wi‑Fi permanece
+somente no `sdkconfig` local, ignorado pelo Git, e não faz parte deste registro.

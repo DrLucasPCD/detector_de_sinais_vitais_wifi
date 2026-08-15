@@ -1,10 +1,13 @@
 # Firmware ESP32-S3 — nó RF Sense
 
-Alvo obrigatório: **ESP32-S3-DevKitC-1 N8R8**. Este projeto usa ESP-IDF v5.4
-instalado localmente; Docker não é necessário.
+Alvo validado: **YD-ESP32-S3 / ESP32-S3-WROOM-1 N16R8** (16 MB de flash e
+8 MB de PSRAM). A tabela de partições ocupa menos de 8 MB e também pode ser
+usada na DevKitC-1 N8R8, ajustando o tamanho de flash no `menuconfig`. Este
+projeto usa ESP-IDF v5.4 instalado localmente; Docker não é necessário.
 
 Para o procedimento completo, incluindo porta USB, primeira gravação, modo
-BOOT/RESET, verificação no Safari e solução de problemas, consulte o
+BOOT/RST, distinção entre as duas portas USB-C, verificação no Safari e
+solução de problemas, consulte o
 [guia de instalação](../../docs/instalacao-esp32-s3.md).
 
 ## Instalar o ESP-IDF no macOS
