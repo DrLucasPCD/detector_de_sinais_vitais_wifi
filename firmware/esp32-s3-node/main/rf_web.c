@@ -75,7 +75,15 @@ static esp_err_t send_file(httpd_req_t *req, const char *path)
 
 static esp_err_t static_handler(httpd_req_t *req)
 {
-    const char *uri = req->uri;
+    char uri_path[128];
+    size_t uri_length = strcspn(req->uri, "?#");
+    if (uri_length == 0 || uri_length >= sizeof(uri_path)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "caminho inválido");
+    }
+    memcpy(uri_path, req->uri, uri_length);
+    uri_path[uri_length] = '\0';
+
+    const char *uri = uri_path;
     char path[160];
     if (strcmp(uri, "/") == 0) {
         uri = "/index.html";

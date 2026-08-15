@@ -197,6 +197,20 @@ Wi‑Fi. Pressione `Ctrl+]` para sair do monitor sem apagar o firmware.
 O navegador abre o WebSocket na mesma origem da página (`/ws/csi`). O CSI
 bruto é processado em memória no Safari e não é enviado ao Netlify.
 
+### Por que o endereço muda do Netlify para a placa
+
+O painel público do Netlify usa HTTPS, enquanto a ESP32 usa HTTP e WebSocket
+local. O Safari não permite que uma página HTTPS abra diretamente um WebSocket
+inseguro (`ws://`) de um IP privado. Por isso, ao escolher **Abrir sensor na
+rede**, o navegador abre a cópia completa do painel hospedada na própria placa.
+
+Essa é a configuração mais simples do projeto: não exige servidor, aplicativo,
+Docker nem certificado local. Depois da troca de endereço, a aparência do
+painel deve permanecer completa e o estado deve mudar para `CALIBRATING` ou
+`BROWSER/LIVE`. A barra de endereço mostrará `rf-sense.local` ou o IP local da
+placa; isso é esperado. Mantenha a placa e o dispositivo com Safari na mesma
+rede Wi-Fi.
+
 ## 8. Gravações seguintes
 
 Depois que o projeto já foi configurado, normalmente basta:
@@ -219,6 +233,7 @@ Se você alterar SSID, senha, hostname ou opções de `menuconfig`, execute
 | `No serial data received` | placa fora do modo download | sequência `BOOT` + `RESET` |
 | Wi‑Fi não conecta | SSID/senha errados ou rede 5 GHz | revisar menuconfig e usar 2,4 GHz |
 | `rf-sense.local` não abre | mDNS bloqueado na rede | usar o IP do log |
+| página da placa aparece branca e sem estilo | firmware antigo tratou o sufixo de versão dos arquivos como parte do nome | recompilar e regravar firmware e partição `storage` com `idf.py -p PORT flash` |
 | dashboard abre, mas não há leitura | clientes isolados ou placa sem tráfego | mesma LAN, desativar isolamento e manter AP estável |
 | muitos quadros perdidos | sinal fraco/interferência | aproximar AP/placa e testar canal 2,4 GHz menos congestionado |
 | placa reinicia durante captura | alimentação/cabo ou fila saturada | fonte USB estável, cabo curto e reduzir interferência |
